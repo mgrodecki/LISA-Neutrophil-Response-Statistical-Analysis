@@ -1,0 +1,141 @@
+---
+title: "Neutrophil_Analysis"
+author: "Srihari Srinivasan"
+date: "2024-11-14"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(tinytex)
+library(tidyverse)
+library(ggplot2)
+library(AER)
+library(haven)
+library(effects)
+library(readxl)
+library(httr)
+library(purrr)
+library(lme4)
+library(MASS)
+library(mgcv)
+library(nlme)
+#library(emmeans)
+
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(out.width = "60%",fig.align='center')
+```
+
+# Read in Data
+
+```{r}
+df <- read.table("Chris_Extrav.txt", header = T)
+head(df)
+```
+
+# Data Processing
+
+```{r}
+# Separates the condition columns into Concentration and Time
+df <- df %>% separate(condition, into = c("concentration", "time"), sep = "mg/mL_")
+
+# Modify variable types
+df$experiment <- as.factor(df$experiment)
+df$concentration <- as.factor(df$concentration)
+df$time <- as.factor(df$time)
+
+head(df)
+```
+
+# Data Visualization
+
+```{r}
+ggplot(df, aes(x = time, y = count)) +
+  geom_line(aes(color = concentration, group = concentration)) + # Line plot by concentration
+  geom_point(aes(color = concentration)) +                       # Points by concentration
+  facet_grid(~ experiment) +                                     # Separate plots by experiment
+  labs(title = "Count over Time by Concentration and Experiment",
+       x = "Time",
+       y = "Count") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(df, aes(x = concentration, y = count)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Distribution of Count by Concentration", x = "Concentration", y = "Count")
+```
+
+```{r}
+ggplot(df, aes(x = concentration, y = count)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Count by Concentration", x = "Concentration", y = "Count")
+```
+
+```{r}
+ggplot(df, aes(x = concentration, y = count, color = time)) +
+  geom_point(size = 4) +
+  theme_minimal() +
+  labs(title = "Count by Concentration and Time", x = "Concentration", y = "Count", color = "Time")
+```
+
+
+# Modeling
+
+```{r}
+model <- lm(count ~ experiment + concentration + time, data = df)
+summary(model)
+```
+```{r}
+plot(model)
+```
+
+
+```{r}
+model <- lm(count ~ experiment + concentration*time, data = df)
+summary(model)
+```
+
+```{r}
+plot(model)
+```
+
+
+```{r}
+model <- lmer(count ~ concentration + time + (1 | experiment), data = df)
+summary(model)
+```
+```{r}
+plot(model)
+```
+
+```{r}
+model <- lmer(count ~ concentration + time + (1 + concentration | experiment), data = df)
+summary(model)
+```
+
+```{r}
+plot(model)
+```
+
+```{r}
+model <- lmer(count ~ concentration*time + (1 + concentration | experiment), data = df)
+summary(model) 
+```
+
+```{r}
+plot(model)
+```
+```{r}
+model <- gls(count ~ concentration + time, data = df, weights = varIdent(form = ~ 1 | concentration))
+summary(model)
+```
+
+```{r}
+plot(model)
+```
+
