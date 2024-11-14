@@ -130,6 +130,17 @@ summary(model)
 ```{r}
 plot(model)
 ```
+
+```{r}
+model <- lm(sqrt(count) ~ experiment + concentration + log(as.numeric(time)), data = df)
+summary(model)
+```
+
+```{r}
+plot(model)
+```
+
+
 ```{r}
 model <- gls(count ~ concentration + time, data = df, weights = varIdent(form = ~ 1 | concentration))
 summary(model)
