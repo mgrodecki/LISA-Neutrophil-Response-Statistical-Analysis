@@ -1,0 +1,364 @@
+---
+title: "extravasation experiment analysis"
+output: html_document
+date: "2024-11-17"
+---
+
+#Analysis of trends from extravasation experiment
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.align = 'center')
+```
+load libraries
+
+```{r, message = FALSE}
+library(RSQLite)
+library(dbplyr)
+library(dplyr)
+library(purrr)
+library(ggplot2)
+library(xts)
+library(ggfortify)
+library(ggthemes)
+library(maps)
+library(mapdata)
+library(leaflet)
+library(remotes)
+library(qst)
+library(ymd)
+library(tidyverse)
+library(emmeans)
+library(ggplot2)
+library("readxl")
+
+```
+
+#Load data
+```{r}
+
+mydata=read_excel("C:/R/Resources/SplitData.xlsx")
+
+#take a look at the data
+glimpse(mydata)
+
+#split data based on experiment index
+df1 <- mydata[mydata$experiment == 1, ]
+df2 <- mydata[mydata$experiment == 2, ]
+df3 <- mydata[mydata$experiment == 3, ]
+df4 <- mydata[mydata$experiment == 4, ]
+df5 <- mydata[mydata$experiment == 5, ]
+
+
+#take a look at the data
+glimpse(df1)
+glimpse(df2)
+glimpse(df3)
+glimpse(df4)
+glimpse(df5)
+
+
+#further split data based on condition
+df1_2 <- df1[df1$condition == 2, ]
+df1_4 <- df1[df1$condition == 4, ]
+df1_6 <- df1[df1$condition == 6, ]
+
+df2_2 <- df2[df2$condition == 2, ]
+df2_4 <- df2[df2$condition == 4, ]
+df2_6 <- df2[df2$condition == 6, ]
+
+df3_2 <- df3[df3$condition == 2, ]
+df3_4 <- df3[df3$condition == 4, ]
+df3_6 <- df3[df3$condition == 6, ]
+
+df4_2 <- df4[df4$condition == 2, ]
+df4_4 <- df4[df4$condition == 4, ]
+df4_6 <- df4[df4$condition == 6, ]
+
+df5_2 <- df5[df5$condition == 2, ]
+df5_4 <- df5[df5$condition == 4, ]
+df5_6 <- df5[df5$condition == 6, ]
+
+
+#take a look at the data
+glimpse(df1_2)
+glimpse(df1_4)
+glimpse(df1_6)
+
+glimpse(df2_2)
+glimpse(df2_4)
+glimpse(df2_6)
+
+glimpse(df3_2)
+glimpse(df3_4)
+glimpse(df3_6)
+
+glimpse(df4_2)
+glimpse(df4_4)
+glimpse(df4_6)
+
+glimpse(df5_2)
+glimpse(df5_4)
+glimpse(df5_6)
+
+
+```
+
+#Analyze some basic trends. Look at count by time, and by condition
+```{r}
+
+#entire data set
+mydata %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count)) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time')
+
+#each experiment separately
+df1 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df1))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 1')
+df2 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df2))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 2')
+df3 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df3))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 3')
+df4 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df4))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 4')
+df5 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df5))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 5')
+
+#entire data set
+mydata %>% 
+    group_by(condition) %>%
+    ggplot(aes(x = condition, y = count)) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Condition')
+
+#each experiment separately
+df1 %>% 
+    group_by(condition) %>%
+    ggplot(aes(x = condition, y = count/nrow(df1))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Condition - Experiment 1')
+df2 %>% 
+    group_by(condition) %>%
+    ggplot(aes(x = condition, y = count/nrow(df2))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Condition - Experiment 2')
+df3 %>% 
+    group_by(condition) %>%
+    ggplot(aes(x = condition, y = count/nrow(df3))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Condition - Experiment 3')
+df4 %>% 
+    group_by(condition) %>%
+    ggplot(aes(x = condition, y = count/nrow(df4))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Condition - Experiment 4')
+df5 %>% 
+    group_by(condition) %>%
+    ggplot(aes(x = condition, y = count/nrow(df5))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Condition - Experiment 5')
+
+
+
+#each experiment and condition separately (vs time)
+df1_2 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df1_2))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 1, Condition 2')
+df1_4 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df1_4))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 1, Condition 4')
+df1_6 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df1_6))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 1, Condition 6')
+
+df2_2 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df2_2))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 2, Condition 2')
+df2_4 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df2_4))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 2, Condition 4')
+df2_6 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df2_6))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 2, Condition 6')
+
+df3_2 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df3_2))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 3, Condition 2')
+df3_4 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df3_4))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 3, Condition 4')
+df3_6 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df3_6))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 3, Condition 6')
+
+df4_2 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df4_2))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 4, Condition 2')
+df4_4 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df4_4))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 4, Condition 4')
+df4_6 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df4_6))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 4, Condition 6')
+
+df5_2 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df5_2))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 5, Condition 2')
+df5_4 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df5_4))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 5, Condition 4')
+df5_6 %>% 
+    group_by(time) %>%
+    ggplot(aes(x = time, y = count/nrow(df5_6))) + 
+    geom_bar(stat = 'identity', fill = 'orange') +
+    geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
+    labs(x = '', y = 'Count', title = 'Count by Time - Experiment 5, Condition 6')
+```
+#run simple linear regression analysis
+
+```{r}
+
+#for all experiments
+experiment=as.factor(mydata$experiment)
+condition=as.factor(mydata$condition)
+time = as.factor(mydata$time)
+count=mydata$count
+fit1 = lm(count~ experiment+condition:time)
+par(mfrow=c(2,2))
+plot(fit1)
+summary(fit1)
+
+#each experiment one at a time (no factors)
+fit1_df1 = lm(count~condition+time, data=df1)
+par(mfrow=c(2,2))
+plot(fit1_df1)
+summary(fit1_df1)
+
+#each experiment one at a time (with factors)
+#condition=as.factor(df1$condition)
+#time = as.factor(df1$time)
+fit1_df1 = lm(count~factor(condition):factor(time), data=df1)
+par(mfrow=c(2,2))
+plot(fit1_df1)
+summary(fit1_df1)
+
+
+```
+```{r}
+experiment=as.factor(mydata$experiment)
+condition=as.factor(mydata$condition)
+time = as.factor(mydata$time)
+count=mydata$count
+fit1_1 = lm(count~ experiment+condition+time)
+par(mfrow=c(2,2))
+plot(fit1_1)
+summary(fit1_1)
+```
+
+#Only experiment and condition as factor
+```{r}
+experiment=as.factor(mydata$experiment)
+condition=as.factor(mydata$condition)
+time = mydata$time
+count=mydata$count
+fit2 = lm(count~ experiment+condition:time)
+par(mfrow=c(2,2))
+plot(fit2)
+summary(fit2)
+
+
+```
+
+#Only experiment as factor
+```{r}
+experiment=as.factor(mydata$experiment)
+condition=mydata$condition
+time = mydata$time
+count=mydata$count
+fit4 = lm(count~ experiment+condition:time)
+par(mfrow=c(2,2))
+plot(fit4)
+summary(fit4)
+```
+
+```{r}
+lncount = mydata$lncountadj
+lntime = mydata$lntimeadj
+
+#fit3 = nlme::gls(count ~ experiment+condition:time, data = mydata,
+#          weights = varIdent(form = ~1 | condition:experiment))
+fit3 = nlme::gls(count ~ experiment+condition:time, data = mydata)
+par(mfrow=c(2,2))
+plot(fit3)
+summary(fit3)
+```
+
