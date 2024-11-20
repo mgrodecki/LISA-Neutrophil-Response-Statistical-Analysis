@@ -104,8 +104,7 @@ glimpse(df5_6)
 
 #Analyze some basic trends. Look at count by time, and by condition
 ```{r}
-
-#entire data set
+#entire data set grouped by time
 mydata %>% 
     group_by(time) %>%
     ggplot(aes(x = time, y = count)) + 
@@ -113,7 +112,7 @@ mydata %>%
     geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
     labs(x = '', y = 'Count', title = 'Count by Time')
 
-#each experiment separately
+#each experiment separately grouped by time
 df1 %>% 
     group_by(time) %>%
     ggplot(aes(x = time, y = count/nrow(df1))) + 
@@ -145,7 +144,13 @@ df5 %>%
     geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
     labs(x = '', y = 'Count', title = 'Count by Time - Experiment 5')
 
-#entire data set
+
+```
+
+
+
+```{r}
+#entire data set grouped by condition
 mydata %>% 
     group_by(condition) %>%
     ggplot(aes(x = condition, y = count)) + 
@@ -153,7 +158,7 @@ mydata %>%
     geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
     labs(x = '', y = 'Count', title = 'Count by Condition')
 
-#each experiment separately
+#each experiment separately grouped by condition
 df1 %>% 
     group_by(condition) %>%
     ggplot(aes(x = condition, y = count/nrow(df1))) + 
@@ -187,6 +192,10 @@ df5 %>%
 
 
 
+
+```
+
+```{r}
 #each experiment and condition separately (vs time)
 df1_2 %>% 
     group_by(time) %>%
@@ -282,83 +291,162 @@ df5_6 %>%
     geom_bar(stat = 'identity', fill = 'orange') +
     geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
     labs(x = '', y = 'Count', title = 'Count by Time - Experiment 5, Condition 6')
+
 ```
+
+
 #run simple linear regression analysis
-
 ```{r}
-
 #for all experiments
 experiment=as.factor(mydata$experiment)
 condition=as.factor(mydata$condition)
-time = as.factor(mydata$time)
+time = mydata$time #time is a continuous variable
 count=mydata$count
-fit1 = lm(count~ experiment+condition:time)
+fit1 = lm(count~ experiment+condition+time)
 par(mfrow=c(2,2))
 plot(fit1)
 summary(fit1)
 
-#each experiment one at a time (no factors)
-fit1_df1 = lm(count~condition+time, data=df1)
-par(mfrow=c(2,2))
-plot(fit1_df1)
-summary(fit1_df1)
-
-#each experiment one at a time (with factors)
-#condition=as.factor(df1$condition)
-#time = as.factor(df1$time)
-fit1_df1 = lm(count~factor(condition):factor(time), data=df1)
-par(mfrow=c(2,2))
-plot(fit1_df1)
-summary(fit1_df1)
-
-
 ```
+#Quick analysis: experiments 2 and 5 are not statistically different from experiment 1
+# conditions 4 and 6 are statistically different from condition 2
+# the model is linear with respect to time (statistically significant)
+# intercept is not statistically siginificant
+#observations 132, 461, 476 have high residuals (likely outliers) and are also high levarage points and/or have large Cook's distance (should be removed)
+
+# Re-run with experiments 1, 2, 5 separately from experiments 3, 4
 ```{r}
-experiment=as.factor(mydata$experiment)
-condition=as.factor(mydata$condition)
-time = as.factor(mydata$time)
-count=mydata$count
-fit1_1 = lm(count~ experiment+condition+time)
+#for experiments 1, 2, 5
+updated <- rbind(df1, df2, df5)
+experiment=as.factor(updated$experiment)
+condition=as.factor(updated$condition)
+time = updated$time #time is a continuous variable
+count=updated$count
+fit1 = lm(count~ experiment+condition+time)
 par(mfrow=c(2,2))
-plot(fit1_1)
-summary(fit1_1)
+plot(fit1)
+summary(fit1)
 ```
-
-#Only experiment and condition as factor
+#Quick analysis: experiments 2 and 5 are not statistically different from experiment 1
+# condition 4 is not statistically different from condition 2, but just barely above the significance threshold of 0.05 so nothing to do here
+# the model is linear with respect to time (statistically significant)
+# intercept is statistically siginificant
+# observations 132, 263, 278 have high residuals (likely outliers) and are also high levarage points and/or have large Cook's distance (should be removed)
 ```{r}
-experiment=as.factor(mydata$experiment)
-condition=as.factor(mydata$condition)
-time = mydata$time
-count=mydata$count
-fit2 = lm(count~ experiment+condition:time)
+#for experiments 3 and 4
+updated <- rbind(df3, df4)
+experiment=as.factor(updated$experiment)
+condition=as.factor(updated$condition)
+time = updated$time #time is a continuous variable
+count=updated$count
+fit1 = lm(count~ experiment+condition+time)
 par(mfrow=c(2,2))
-plot(fit2)
-summary(fit2)
-
-
+plot(fit1)
+summary(fit1)
 ```
+#Quick analysis: experiment 4 is statistically different from experiment 3 (should analyze them separately)
+# condition 4 is statistically different from condition 2, but just barely below the significance threshold of 0.05 so nothing to do here
+# the model is linear with respect to time (statistically significant)
+# intercept is statistically siginificant
+#observations 92, 95, 198 have high residuals (likely outliers) and are also high levarage points (should be removed)
 
-#Only experiment as factor
+# Re-run with experiments 3 and 4 separately
 ```{r}
-experiment=as.factor(mydata$experiment)
-condition=mydata$condition
-time = mydata$time
-count=mydata$count
-fit4 = lm(count~ experiment+condition:time)
-par(mfrow=c(2,2))
-plot(fit4)
-summary(fit4)
-```
 
+#experiment 3
+condition=as.factor(df3$condition)
+time = df3$time
+count=df3$count
+fit_df3 = lm(count~condition+time)
+par(mfrow=c(2,2))
+plot(fit_df3)
+summary(fit_df3)
+
+#experiment 4
+condition=as.factor(df4$condition)
+time = df4$time
+count=df4$count
+fit_df4 = lm(count~condition+time)
+par(mfrow=c(2,2))
+plot(fit_df4)
+summary(fit_df4)
+```
+#Quick analysis of experiment 3:
+# conditions 4 and 6 are statistically different from condition 2
+# the model is linear with respect to time (statistically significant)
+# intercept is statistically siginificant
+# observations 92, 95 have high residuals (likely outliers) and are also high levarage points and/or have large Cook's distance (should be removed)
+
+
+#Quick analysis of experiment 4:
+# condition 4 is not statistically different from condition 2
+# the model is linear with respect to time (statistically significant)
+# intercept is statistically siginificant
+# observations 92, 95 have high residuals (likely outliers) and are also high levarage points and/or have large Cook's distance (should be removed)
+
+
+```{r}
+#each remaining experiment one at a time (1, 2 and 5)
+#####################################################
+
+#experiment 1
+condition=as.factor(df1$condition)
+time = df1$time
+count=df1$count
+fit_df1 = lm(count~condition+time)
+par(mfrow=c(2,2))
+plot(fit_df1)
+summary(fit_df1)
+
+#experiment 2
+condition=as.factor(df2$condition)
+time = df2$time
+count=df2$count
+fit_df2 = lm(count~condition+time)
+par(mfrow=c(2,2))
+plot(fit_df2)
+summary(fit_df2)
+
+#experiment 5
+condition=as.factor(df5$condition)
+time = df5$time
+count=df5$count
+fit_df5 = lm(count~condition+time)
+par(mfrow=c(2,2))
+plot(fit_df5)
+summary(fit_df5)
+```
+#Quick analysis of experiment 1:
+# condition 6 is not statistically different from condition 2
+# the model is linear with respect to time (statistically significant)
+# intercept is not statistically siginificant
+# observations 47, 50 have high residuals (likely outliers) and are also high levarage points and/or have large Cook's distance (should be removed)
+
+#Quick analysis of experiment 2:
+# conditions 4 and 6 are statistically different from condition 2
+# the model is linear with respect to time (statistically significant)
+# intercept is statistically siginificant
+# observations 91, 51, 61 have high residuals (likely outliers) and are also high levarage points and/or have large Cook's distance (should be removed)
+
+#Quick analysis of experiment 5:
+# conditions 4 and 6 are statistically different from condition 2
+# the model is linear with respect to time (statistically significant)
+# intercept is not statistically siginificant
+# observations 92, 107 have high residuals (likely outliers) and are also high levarage points and/or have large Cook's distance (should be removed)
+
+
+
+
+```{r}
+
+```
+#Experiment with different varaince models in GLS
 ```{r}
 lncount = mydata$lncountadj
 lntime = mydata$lntimeadj
-
 #fit3 = nlme::gls(count ~ experiment+condition:time, data = mydata,
 #          weights = varIdent(form = ~1 | condition:experiment))
 fit3 = nlme::gls(count ~ experiment+condition:time, data = mydata)
 par(mfrow=c(2,2))
 plot(fit3)
 summary(fit3)
-```
-
