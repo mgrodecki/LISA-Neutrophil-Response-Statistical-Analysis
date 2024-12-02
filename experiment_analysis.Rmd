@@ -147,6 +147,9 @@ df5 %>%
 
 ```
 
+```{r}
+
+```
 
 
 ```{r}
@@ -292,29 +295,189 @@ df5_6 %>%
     geom_smooth(method = 'lm', se = FALSE, linetype = 'dashed', size = 0.4, color = 'red') + 
     labs(x = '', y = 'Count', title = 'Count by Time - Experiment 5, Condition 6')
 
+
+
+#something going on with experiment 2, all three conditions are outliers compared to other experiments
+
 ```
 
 
-#run simple linear regression analysis
+
+#plot count against each factor to inspect individual relationships
 ```{r}
-#for all experiments
+#count vs. experiment
+plot(mydata$experiment,mydata$count,xlab="experiment",pch=20,ylab="count", ylim=c(0,2.5),xlim=c(0,5))
+
+#count vs. condition
+plot(mydata$condition,mydata$count,xlab="condition",pch=20,ylab="count", ylim=c(0,2.5),xlim=c(0,10))
+
+#count vs. time
+plot(mydata$time,mydata$count,xlab="time",pch=20,ylab="count", ylim=c(0,2.5),xlim=c(0,10))
+
+
+#range of counts shows lot of variability for each experiment, especially big range by time. Why are neutrophil concentrations showing big range after 8 hours? 
+```
+
+#run simple linear regression analysis
+#full model with all experiments
+######################################################################################
+
+```{r}
+#full model with all experiments
+experiment=as.factor(mydata$experiment) 
+condition=as.factor(mydata$condition) 
+time = mydata$time #time is a continuous variable
+count=mydata$count
+fit = lm(count~ experiment+condition+time)
+plot(fit)
+summary(fit)
+
+#Regression analysis: experiments 2 and 5 are not statistically different from experiment 1
+# conditions 4 and 6 are statistically different from condition 2
+# the model is linear with respect to time (statistically significant)
+# intercept is not statistically significant
+#observations 132, 476 have high residuals (likely outliers)
+
+#Look for outliers
+#########################################
+#Compute Studentized residuals
+resstudent <- rstudent(fit)
+#Plot Studentized residuals
+plot (resstudent, ylab="Studentized Residuals")
+abline (h=0)
+#test Studentized residuals (observation #476 detected as an outlier)
+car::outlierTest(fit, n.max = Inf)
+
+
+#Look for potentially influential points
+#########################################
+#compute and inspect Cook's statistics
+cook <- cooks.distance (fit)
+cook
+library(ggplot2)
+library(faraway)
+halfnorm (cook, 3, ylab="Cook's distances")
+
+#point 476 with the largest Cook's distance is indicated as the most influential
+
+
+
+#Look for leverage points
+#########################################
+#compute the leverage value for all the observations
+leverage = hatvalues(fit)
+
+#plot leverage values
+plot(leverage)
+
+library(car)
+
+#plot residuals, leverage, and Cook's distance 
+influencePlot(fit)
+
+# point 476 is being identified as high leverage point
+
+
+#exclude point 476 with the largest Cook's distance and therefore the most influential and re-fit the data
+fit_minus_476 <- lm (count ~ experiment+condition+time,mydata, subset=(cook < max (cook)))
+summary (fit_minus_476)
+
+#compare with fitting the full dataset
+fit_full = lm(count~ experiment+condition+time, mydata)
+summary (fit_full)
+
+#the model with point 476 removed produces worse fit than the full model as evidenced by:
+# 1. smaller R-squared value
+# 2. lower F-statistic
+
+```
+
+```{r}
+#full model with all experiments
 experiment=as.factor(mydata$experiment)
 condition=as.factor(mydata$condition)
 time = mydata$time #time is a continuous variable
 count=mydata$count
-fit1 = lm(count~ experiment+condition+time)
-par(mfrow=c(2,2))
-plot(fit1)
-summary(fit1)
+fit = lm(count~ experiment+condition+time)
+
+#Look for violations of Constant Variance
+#########################################
+
+#plot all residuals
+plot (fitted (fit), residuals (fit), xlab="Fitted", ylab="Residuals")
+abline (h=0)
+plot (fitted (fit), abs (residuals (fit)),
+xlab="Fitted", ylab="|Residuals|")
+
+#plot residuals against individual predictors on one plot side-by-side and absolute values on four individual plots
+car::residualPlots(fit, pch=20, col="red", fitted = F, ask = F, layout = c(3,2), tests = F, quadratic = F)
+plot (experiment, abs(residuals (fit)), xlab="experiment", ylab="}|Residuals|")
+plot (condition, abs(residuals (fit)), xlab="condition", ylab="}|Residuals|")
+plot (time, abs(residuals (fit)), xlab="time", ylab="}|Residuals|")
+
+#residuals are seen positively correlated to fitted values
+#no significant difference detected by variance test
+#large residuals detected in experiment 2 and 5
+
+
+
+#Look for violations of Normality
+#########################################
+res <- fit$residuals
+#histogram of residuals
+hist(res, xlab = "Residuals", probability = T, ylim = c(0, 6))
+#empirical density
+lines(density(res, na.rm=T), lwd = 2, col = "red")
+#best fitting normal curve
+curve(dnorm(x, mean = mean(res, na.rm=T), sd = sd(res, na.rm=T)), lty = 2, lwd = 2, add = TRUE, col = "blue")
+#no deviation from Normality seen
+
+#ordered values of the residuals vs quantiles of the standard normal distribution (Q-Q plot)
+qqnorm(as.numeric(res), col="red", pch=20)
+qqline(as.numeric(res), col="blue", lty=1, lwd=1)
+#deviation from standard normal distribution seen in the bottom quantile
+
+#The Shapiro-Wilk test 
+shapiro.test (residuals (fit))
+#violation of Normality detected
+
+
+#Look for violations of Linearity
+#########################################
+#generate component-plus-residual plot for each predictor
+car::crPlots(fit, terms = . ~ experiment+condition+time, pch=20, col="red")
+#experiment 1, 2, and 5 are distinct from 3 and 4
+#very small deviation from linearity seen for time
+
+
+#Look for Correlations
+#########################################
+#make an index plot of the residuals. Look for longer runs of residuals above or below the line.
+plot (residuals (fit), ylab="Residuals")
+abline (h=0)
+#some correlation seen in individual experiments
+
+#check for correlation using a regression of successive residuals
+summary(lm(residuals(fit)[-1] ~ 1+residuals (fit) [-1]))
+#no significant correlation seen
+
+#compute the Durbin-Watson statistic
+library(lmtest)
+dwtest (count ~ experiment+condition+time, data=mydata)
+#significant correlation seen
+
+
+#outliers in Pearson residual plot in experiment 2, 5, and condition 2
+#no indications of non-normatility in histogram of residuals 
+#Normal Q-Q plot shows points in the lowest quantile that slightly deviate from normality 
+#shapiro-wilk normality test shows deviation from normality 
+#durban watson test shows that there is correlation between experiment, condition and time 
 
 ```
-#Quick analysis: experiments 2 and 5 are not statistically different from experiment 1
-# conditions 4 and 6 are statistically different from condition 2
-# the model is linear with respect to time (statistically significant)
-# intercept is not statistically siginificant
-#observations 132, 461, 476 have high residuals (likely outliers) and are also high levarage points and/or have large Cook's distance (should be removed)
 
-# Re-run with experiments 1, 2, 5 separately from experiments 3, 4
+# Re-run with experiments 1, 2, and 5
+#####################################################################
+
 ```{r}
 #for experiments 1, 2, 5
 updated <- rbind(df1, df2, df5)
@@ -322,16 +485,165 @@ experiment=as.factor(updated$experiment)
 condition=as.factor(updated$condition)
 time = updated$time #time is a continuous variable
 count=updated$count
-fit1 = lm(count~ experiment+condition+time)
-par(mfrow=c(2,2))
-plot(fit1)
-summary(fit1)
-```
+fit = lm(count~ experiment+condition+time)
+plot(fit)
+summary(fit)
+
 #Quick analysis: experiments 2 and 5 are not statistically different from experiment 1
 # condition 4 is not statistically different from condition 2, but just barely above the significance threshold of 0.05 so nothing to do here
 # the model is linear with respect to time (statistically significant)
-# intercept is statistically siginificant
-# observations 132, 263, 278 have high residuals (likely outliers) and are also high levarage points and/or have large Cook's distance (should be removed)
+# intercept is statistically significant
+# observations 132, 263, 278 have high residuals (likely outliers) and are also high leverage points and/or have large Cook's distance
+
+
+#Look for outliers
+#########################################
+#Compute Studentized residuals
+resstudent <- rstudent(fit)
+#Plot Studentized residuals
+plot (resstudent, ylab="Studentized Residuals")
+abline (h=0)
+#test Studentized residuals (observations #132, #235 and #278 detected as outliers)
+car::outlierTest(fit, n.max = Inf)
+
+
+#Look for potentially influential points
+#########################################
+#compute and inspect Cook's statistics
+cook <- cooks.distance (fit)
+cook
+library(ggplot2)
+library(faraway)
+halfnorm (cook, 3, ylab="Cook's distances")
+
+#point 278 with the largest Cook's distance is indicated as the most influential
+
+
+
+#Look for leverage points
+#########################################
+#compute the leverage value for all the observations
+leverage = hatvalues(fit)
+
+#plot leverage values
+plot(leverage)
+
+library(car)
+
+#plot residuals, leverage, and Cook's distance 
+influencePlot(fit)
+
+# point 278 is being identified as high leverage point
+
+
+#exclude point 278 with the largest Cook's distance and therefore the most influential and re-fit the data
+fit_minus_278 <- lm (count ~ experiment+condition+time,updated, subset=(cook < max (cook)))
+summary (fit_minus_278)
+
+#compare with fitting the full dataset
+fit_full = lm(count~ experiment+condition+time, updated)
+summary (fit_full)
+
+
+
+#exclude point 132, 235, 278 with the largest studentized residuals and large Cook's distances and re-fit the data
+fit_minus_132_235_278 <- lm (count ~ experiment+condition+time,updated, subset=(resstudent < (max (resstudent)-0.7)))
+summary (fit_minus_132_235_278)
+
+
+#In both cases the model with points indicated as outliers removed produces worse fit than the full model as evidenced by:
+# 1. smaller R-squared value
+# 2. lower F-statistic
+
+```
+
+
+
+```{r}
+#for experiments 1, 2, 5
+updated <- rbind(df1, df2, df5)
+experiment=as.factor(updated$experiment)
+condition=as.factor(updated$condition)
+time = updated$time #time is a continuous variable
+count=updated$count
+fit = lm(count~ experiment+condition+time)
+plot(fit)
+summary(fit)
+
+
+
+#Look for violations of Constant Variance
+#########################################
+
+#plot all residuals
+plot (fitted (fit), residuals (fit), xlab="Fitted", ylab="Residuals")
+abline (h=0)
+plot (fitted (fit), abs (residuals (fit)),
+xlab="Fitted", ylab="|Residuals|")
+
+#plot residuals against individual predictors on one plot side-by-side and absolute values on four individual plots
+car::residualPlots(fit, pch=20, col="red", fitted = F, ask = F, layout = c(3,2), tests = F, quadratic = F)
+plot (experiment, abs(residuals (fit)), xlab="experiment", ylab="}|Residuals|")
+plot (condition, abs(residuals (fit)), xlab="condition", ylab="}|Residuals|")
+plot (time, abs(residuals (fit)), xlab="time", ylab="}|Residuals|")
+
+#residuals are seen positively correlated to fitted values
+#no significant difference detected by variance test indicating constant variance
+#large residuals detected in experiment 2 and 5
+
+
+
+#Look for violations of Normality
+#########################################
+res <- fit$residuals
+#histogram of residuals
+hist(res, xlab = "Residuals", probability = T, ylim = c(0, 6))
+#empirical density
+lines(density(res, na.rm=T), lwd = 2, col = "red")
+#best fitting normal curve
+curve(dnorm(x, mean = mean(res, na.rm=T), sd = sd(res, na.rm=T)), lty = 2, lwd = 2, add = TRUE, col = "blue")
+#deviation from Normality seen
+
+#ordered values of the residuals vs quantiles of the standard normal distribution (Q-Q plot)
+qqnorm(as.numeric(res), col="red", pch=20)
+qqline(as.numeric(res), col="blue", lty=1, lwd=1)
+#deviation from standard normal distribution seen in the top and the bottom quantiles
+
+#The Shapiro-Wilk test 
+shapiro.test (residuals (fit))
+#significant violation of Normality detected
+
+
+#Look for violations of Linearity
+#########################################
+#generate component-plus-residual plot for each predictor
+car::crPlots(fit, terms = . ~ experiment+condition+time, pch=20, col="red")
+#very small deviation from linearity seen for time
+
+
+#Look for Correlations
+#########################################
+#make an index plot of the residuals. Look for longer runs of residuals above or below the line.
+plot (residuals (fit), ylab="Residuals")
+abline (h=0)
+#some correlation seen in individual experiments
+
+#check for correlation using a regression of successive residuals
+summary(lm(residuals(fit)[-1] ~ 1+residuals (fit) [-1]))
+#no significant correlation seen
+
+#compute the Durbin-Watson statistic
+library(lmtest)
+dwtest (count ~ experiment+condition+time, data=updated)
+#significant correlation seen
+
+
+```
+
+
+
+# Re-run with experiments 3 and 4
+#####################################################################
 ```{r}
 #for experiments 3 and 4
 updated <- rbind(df3, df4)
@@ -342,7 +654,9 @@ count=updated$count
 fit1 = lm(count~ experiment+condition+time)
 par(mfrow=c(2,2))
 plot(fit1)
-summary(fit1)
+summary(fit1)d
+
+#grouping experiments 3 and 4 produces a better fit than grouping experiments 1,2,5
 ```
 #Quick analysis: experiment 4 is statistically different from experiment 3 (should analyze them separately)
 # condition 4 is statistically different from condition 2, but just barely below the significance threshold of 0.05 so nothing to do here
@@ -435,18 +749,82 @@ summary(fit_df5)
 # observations 92, 107 have high residuals (likely outliers) and are also high levarage points and/or have large Cook's distance (should be removed)
 
 
-
-
+##################################################################
+#Experiment with different variance models in GLS (equal variance)
+##################################################################
 ```{r}
+library(nlme)
+experiment=as.factor(mydata$experiment)
+condition=as.factor(mydata$condition)
+count = mydata$count
+time = mydata$time
 
+fit3 = nlme::gls(count ~ experiment+condition+time, data = mydata)
+par(mfrow=c(2,2))
+plot(fit3)
+summary(fit3)
 ```
-#Experiment with different varaince models in GLS
+#Experiment with different varaince models in GLS (ln time with equal variance)
 ```{r}
+library(nlme)
+experiment=as.factor(mydata$experiment)
+condition=as.factor(mydata$condition)
+count = mydata$count
+lntime = mydata$lntimeadj
+#fit3 = nlme::gls(count ~ experiment+condition:time, data = mydata,
+#          weights = varIdent(form = ~1 | condition:experiment))
+fit3 = nlme::gls(count ~ experiment+condition+lntime, data = mydata)
+par(mfrow=c(2,2))
+plot(fit3)
+summary(fit3)
+```
+#Experiment with different varaince models in GLS (ln count and ln time with equal variance)
+```{r}
+library(nlme)
+experiment=as.factor(mydata$experiment)
+condition=as.factor(mydata$condition)
 lncount = mydata$lncountadj
 lntime = mydata$lntimeadj
 #fit3 = nlme::gls(count ~ experiment+condition:time, data = mydata,
 #          weights = varIdent(form = ~1 | condition:experiment))
-fit3 = nlme::gls(count ~ experiment+condition:time, data = mydata)
+fit3 = nlme::gls(lncount ~ experiment+condition+lntime, data = mydata)
 par(mfrow=c(2,2))
 plot(fit3)
 summary(fit3)
+```
+
+
+#Experiment with different variance models in GLS (Exp variance)
+```{r}
+library(nlme)
+experiment=as.factor(mydata$experiment)
+condition=as.factor(mydata$condition)
+count = mydata$count
+time = mydata$time
+fit3 <- gls(count ~ experiment+condition+time,  weights = varExp(form = ~ fitted(.)), data = mydata)
+par(mfrow=c(2,2))
+plot(fit3)
+summary(fit3)
+```
+
+
+#Experiment with different variance models in GLS (ln count and ln time with Exp variance)
+```{r}
+experiment=as.factor(mydata$experiment)
+condition=as.factor(mydata$condition)
+lncount = mydata$lncountadj
+lntime = mydata$lntimeadj
+fit3 <- gls(lncount ~ experiment+condition+lntime,  weights = varExp(form = ~ fitted(.)), data = mydata)
+par(mfrow=c(2,2))
+plot(fit3)
+summary(fit3)
+
+```
+
+
+# Analysis: 
+# 1. Exponential variance model effectively deals with the dependency of residuals on fitted values
+# 2. Ln transformation of time and count with the exponential variance model produces the best fit based on the AIC and BIC measures
+# 3. The resulting model is linear in all three variables (experiment, condition, time) and all coefficients are statistically significant (intercept is not)
+
+
