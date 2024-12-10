@@ -44,7 +44,7 @@ df <- df %>% separate(condition, into = c("concentration", "time"), sep = "mg/mL
 # Modify variable types
 df$experiment <- as.factor(df$experiment)
 df$concentration <- as.factor(df$concentration)
-df$time <- as.factor(df$time)
+df$time <- as.numeric(df$time)
 
 head(df)
 ```
@@ -61,6 +61,62 @@ ggplot(df, aes(x = time, y = count)) +
        y = "Count") +
   theme_minimal()
 ```
+
+```{r}
+ggplot(df %>% filter(experiment == 1), aes(x = time, y = count)) +
+  geom_line(aes(color = concentration, group = concentration)) + # Line plot by concentration
+  geom_point(aes(color = concentration)) +                       # Points by concentration
+  facet_grid(~ concentration) +                                     # Separate plots by experiment
+  labs(title = "Count over Time by Concentration",
+       x = "Time",
+       y = "Count") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(df %>% filter(experiment == 2), aes(x = time, y = count)) +
+  geom_line(aes(color = concentration, group = concentration)) + # Line plot by concentration
+  geom_point(aes(color = concentration)) +                       # Points by concentration
+  facet_grid(~ concentration) +                                     # Separate plots by experiment
+  labs(title = "Count over Time by Concentration",
+       x = "Time",
+       y = "Count") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(df %>% filter(experiment == 3), aes(x = time, y = count)) +
+  geom_line(aes(color = concentration, group = concentration)) + # Line plot by concentration
+  geom_point(aes(color = concentration)) +                       # Points by concentration
+  facet_grid(~ concentration) +                                     # Separate plots by experiment
+  labs(title = "Count over Time by Concentration",
+       x = "Time",
+       y = "Count") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(df %>% filter(experiment == 4), aes(x = time, y = count)) +
+  geom_line(aes(color = concentration, group = concentration)) + # Line plot by concentration
+  geom_point(aes(color = concentration)) +                       # Points by concentration
+  facet_grid(~ concentration) +                                     # Separate plots by experiment
+  labs(title = "Count over Time by Concentration",
+       x = "Time",
+       y = "Count") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(df %>% filter(experiment == 5), aes(x = time, y = count)) +
+  geom_line(aes(color = concentration, group = concentration)) + # Line plot by concentration
+  geom_point(aes(color = concentration)) +                       # Points by concentration
+  facet_grid(~ concentration) +                                     # Separate plots by experiment
+  labs(title = "Count over Time by Concentration",
+       x = "Time",
+       y = "Count") +
+  theme_minimal()
+```
+
 
 ```{r}
 ggplot(df, aes(x = concentration, y = count)) +
