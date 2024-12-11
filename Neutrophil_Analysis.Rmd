@@ -49,6 +49,7 @@ df$time <- as.numeric(df$time)
 head(df)
 ```
 
+
 # Data Visualization
 
 ```{r}
@@ -174,7 +175,9 @@ model <- lm(count ~ experiment + concentration + time, data = df)
 summary(model)
 ```
 ```{r}
-plot(model)
+par(mfrow = c(2, 2))  # Create a 2x2 layout for the plots
+
+plot(model)  # This will distribute the plots in the 2x2 grid
 ```
 
 
@@ -211,16 +214,24 @@ summary(model)
 ```
 
 ```{r}
+
 plot(model)
 ```
 
 ```{r}
-model <- lm(sqrt(count) ~ experiment + concentration + ifelse(df$time == 0, 0, log(df$time)), data = df)
+df$log_time <- ifelse(df$time == 0, 0, log(df$time))
+df$log_count <- ifelse(df$count == 0, 0, log(df$count))
+```
+
+
+```{r}
+model <- lm(log_count ~ experiment + concentration + log_time, data = df)
 summary(model)
 ```
 
 
 ```{r}
+par(mfrow = c(2, 2))  # Create a 2x2 layout for the plots
 plot(model)
 ```
 
