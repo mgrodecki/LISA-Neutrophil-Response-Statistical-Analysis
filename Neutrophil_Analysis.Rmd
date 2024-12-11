@@ -63,59 +63,81 @@ ggplot(df, aes(x = time, y = count)) +
 ```
 
 ```{r}
-ggplot(df %>% filter(experiment == 1), aes(x = time, y = count)) +
-  geom_line(aes(color = concentration, group = concentration)) + # Line plot by concentration
-  geom_point(aes(color = concentration)) +                       # Points by concentration
-  facet_grid(~ concentration) +                                     # Separate plots by experiment
-  labs(title = "Count over Time by Concentration",
-       x = "Time",
-       y = "Count") +
+plot_df <- df %>%
+  group_by(experiment, concentration, time) %>%
+  summarise(count = mean(count, na.rm = TRUE), .groups = "drop")  # Calculate average count
+```
+
+```{r}
+ggplot(plot_df %>% filter(experiment == 1), aes(x = time, y = count)) +
+  geom_line(aes(color = as.factor(concentration), group = concentration)) +  # Line plot by concentration
+  geom_point(aes(color = as.factor(concentration))) +  # Points by concentration
+  facet_wrap(~ concentration) +  # Separate plots by concentration
+  labs(
+    title = "Average Neutrophil Count over Time by Concentration (Experiment 1)",
+    x = "Time",
+    y = "Average Count",
+    color = "Concentration"
+  ) +
   theme_minimal()
 ```
 
 ```{r}
-ggplot(df %>% filter(experiment == 2), aes(x = time, y = count)) +
-  geom_line(aes(color = concentration, group = concentration)) + # Line plot by concentration
-  geom_point(aes(color = concentration)) +                       # Points by concentration
-  facet_grid(~ concentration) +                                     # Separate plots by experiment
-  labs(title = "Count over Time by Concentration",
-       x = "Time",
-       y = "Count") +
+ggplot(plot_df %>% filter(experiment == 2), aes(x = time, y = count)) +
+  geom_line(aes(color = as.factor(concentration), group = concentration)) +  # Line plot by concentration
+  geom_point(aes(color = as.factor(concentration))) +  # Points by concentration
+  facet_wrap(~ concentration) +  # Separate plots by concentration
+  labs(
+    title = "Average Neutrophil Count over Time by Concentration (Experiment 2)",
+    x = "Time",
+    y = "Average Count",
+    color = "Concentration"
+  ) +
   theme_minimal()
 ```
 
 ```{r}
-ggplot(df %>% filter(experiment == 3), aes(x = time, y = count)) +
-  geom_line(aes(color = concentration, group = concentration)) + # Line plot by concentration
-  geom_point(aes(color = concentration)) +                       # Points by concentration
-  facet_grid(~ concentration) +                                     # Separate plots by experiment
-  labs(title = "Count over Time by Concentration",
-       x = "Time",
-       y = "Count") +
+ggplot(plot_df %>% filter(experiment == 3), aes(x = time, y = count)) +
+  geom_line(aes(color = as.factor(concentration), group = concentration)) +  # Line plot by concentration
+  geom_point(aes(color = as.factor(concentration))) +  # Points by concentration
+  facet_wrap(~ concentration) +  # Separate plots by concentration
+  labs(
+    title = "Average Neutrophil Count over Time by Concentration (Experiment 3)",
+    x = "Time",
+    y = "Average Count",
+    color = "Concentration"
+  ) +
   theme_minimal()
 ```
 
 ```{r}
-ggplot(df %>% filter(experiment == 4), aes(x = time, y = count)) +
-  geom_line(aes(color = concentration, group = concentration)) + # Line plot by concentration
-  geom_point(aes(color = concentration)) +                       # Points by concentration
-  facet_grid(~ concentration) +                                     # Separate plots by experiment
-  labs(title = "Count over Time by Concentration",
-       x = "Time",
-       y = "Count") +
+ggplot(plot_df %>% filter(experiment == 4), aes(x = time, y = count)) +
+  geom_line(aes(color = as.factor(concentration), group = concentration)) +  # Line plot by concentration
+  geom_point(aes(color = as.factor(concentration))) +  # Points by concentration
+  facet_wrap(~ concentration) +  # Separate plots by concentration
+  labs(
+    title = "Average Neutrophil Count over Time by Concentration (Experiment 4)",
+    x = "Time",
+    y = "Average Count",
+    color = "Concentration"
+  ) +
   theme_minimal()
 ```
 
 ```{r}
-ggplot(df %>% filter(experiment == 5), aes(x = time, y = count)) +
-  geom_line(aes(color = concentration, group = concentration)) + # Line plot by concentration
-  geom_point(aes(color = concentration)) +                       # Points by concentration
-  facet_grid(~ concentration) +                                     # Separate plots by experiment
-  labs(title = "Count over Time by Concentration",
-       x = "Time",
-       y = "Count") +
+ggplot(plot_df %>% filter(experiment == 5), aes(x = time, y = count)) +
+  geom_line(aes(color = as.factor(concentration), group = concentration)) +  # Line plot by concentration
+  geom_point(aes(color = as.factor(concentration))) +  # Points by concentration
+  facet_wrap(~ concentration) +  # Separate plots by concentration
+  labs(
+    title = "Average Neutrophil Count over Time by Concentration (Experiment 5)",
+    x = "Time",
+    y = "Average Count",
+    color = "Concentration"
+  ) +
   theme_minimal()
 ```
+
 
 
 ```{r}
@@ -137,6 +159,11 @@ ggplot(df, aes(x = concentration, y = count, color = time)) +
   geom_point(size = 4) +
   theme_minimal() +
   labs(title = "Count by Concentration and Time", x = "Concentration", y = "Count", color = "Time")
+```
+
+```{r}
+cor(df %>% dplyr::select(time, count))
+plot(cor(df %>% dplyr::select(time, count)))
 ```
 
 
@@ -188,9 +215,10 @@ plot(model)
 ```
 
 ```{r}
-model <- lm(sqrt(count) ~ experiment + concentration + log(as.numeric(time)), data = df)
+model <- lm(sqrt(count) ~ experiment + concentration + ifelse(df$time == 0, 0, log(df$time)), data = df)
 summary(model)
 ```
+
 
 ```{r}
 plot(model)
